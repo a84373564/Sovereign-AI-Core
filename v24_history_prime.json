@@ -1,0 +1,47 @@
+# v24_歷史紀錄器 history_prime.py（最猛版本）
+
+import json
+from pathlib import Path
+from statistics import mean
+from datetime import datetime
+
+SCORE_PATH = "/mnt/data/ai/module_scores.json"
+TRUST_PATH = "/mnt/data/ai/trust_index.json"
+POOL_PATH = "/mnt/data/ai/module_pool.json"
+HISTORY_PATH = "/mnt/data/ai/history_prime.json"
+
+def load_json(path):
+    if Path(path).exists():
+        with open(path, "r") as f:
+            return json.load(f)
+    return []
+
+def save_json(data, path):
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
+
+def update_history():
+    scores = json.load(open(SCORE_PATH)) if Path(SCORE_PATH).exists() else {}
+    trust = json.load(open(TRUST_PATH)) if Path(TRUST_PATH).exists() else {}
+    pool = json.load(open(POOL_PATH)) if Path(POOL_PATH).exists() else {}
+
+    score_vals = [v["score"] for v in scores.values() if v["score"] >= 0]
+    trust_vals = [v["trust_score"] for v in trust.values() if v["trust_score"] >= 0]
+
+    record = {
+        "timestamp": str(datetime.utcnow()),
+        "module_count": len(pool.get("modules", [])),
+        "avg_score": round(mean(score_vals), 4) if score_vals else 0,
+        "avg_trust": round(mean(trust_vals), 4) if trust_vals else 0,
+        "high_score_count": sum(1 for v in score_vals if v >= 2.5),
+        "high_trust_count": sum(1 for v in trust_vals if v >= 0.85)
+    }
+
+    history = load_json(HISTORY_PATH)
+    history.append(record)
+    save_json(history, HISTORY_PATH)
+
+    print(f"[history_prime] History updated. Total records: {len(history)}")
+
+if __name__ == "__main__":
+    update_history()
